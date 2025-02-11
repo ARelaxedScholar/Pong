@@ -1,0 +1,10 @@
+[package]
+name = "pong"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = "1.21.0"
+glfw = "0.59.0"
+pollster = "0.4.0"
+wgpu = "24.0.1"
