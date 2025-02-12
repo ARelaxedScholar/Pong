@@ -1,11 +1,11 @@
 #![warn(clippy::all, clippy::pedantic)]
-use glfw::{fail_on_errors, Context, Window};
+use glfw::{fail_on_errors, Action, Context, Key, Window};
 use wgpu::{
     self,
     util::{DeviceExt, RenderEncoder},
-    BackendOptions, Backends, BufferDescriptor, BufferUsages, InstanceDescriptor, InstanceFlags,
-    PipelineCompilationOptions, RenderPipelineDescriptor, RequestAdapterOptionsBase, VertexState,
-    QUERY_RESOLVE_BUFFER_ALIGNMENT,
+    BackendOptions, Backends, BufferDescriptor, BufferUsages, Color, InstanceDescriptor,
+    InstanceFlags, PipelineCompilationOptions, RenderPipelineDescriptor, RequestAdapterOptionsBase,
+    VertexState, QUERY_RESOLVE_BUFFER_ALIGNMENT,
 };
 
 struct Player<'a> {
@@ -167,87 +167,159 @@ async fn run() {
     let mut glfw = glfw::init(fail_on_errors!()).expect("Failed to get glfw instance");
 
     let (mut window, events) = glfw
-        .create_window(800, 600, "Pong", glfw::WindowMode::Windowed)
+        .create_window(1_000, 600, "Pong", glfw::WindowMode::Windowed)
         .expect("Failed to get window and events handlers.");
 
     window.set_key_polling(true);
     window.make_current();
 
     let state = State::new(&mut window).await;
-
     // Defining the vertex buffers
-
+    //
     let mut vertices_1 = [
         Vertex {
-            position: [0., 1., 1.],
+            position: [-0.8, 0.2, 0.0],
             color: [1., 1., 1.],
-        },
+        }, // A
         Vertex {
-            position: [-0.5, 1., 1.],
+            position: [-0.8, -0.2, 0.0],
             color: [1., 1., 1.],
-        },
+        }, // B
         Vertex {
-            position: [-0.5, 0., 1.],
+            position: [-0.77, 0.2, 0.0],
             color: [1., 1., 1.],
-        },
+        }, // C
         Vertex {
-            position: [0., 0., 1.],
+            position: [-0.77, -0.2, 0.0],
             color: [1., 1., 1.],
-        },
+        }, // D
     ];
+    let indices_1: &[u16] = &[0, 1, 2, 2, 1, 3];
 
-    let indices_1 = vec![0, 1, 2, 0, 2, 3];
-
-    let mut player_1 = Player {
-        vertices: &mut vertices_1,
+    let player_1 = Player {
+        vertices: vertices_1.as_mut_slice(),
     };
 
     let mut vertices_2 = [
         Vertex {
-            position: [1., 1., 1.],
+            position: [0.8, 0.2, 0.0],
+            color: [1., 1., 1.],
+        }, // A
+        Vertex {
+            position: [0.8, -0.2, 0.0],
+            color: [1., 1., 1.],
+        }, // B
+        Vertex {
+            position: [0.77, 0.2, 0.0],
+            color: [1., 1., 1.],
+        }, // C
+        Vertex {
+            position: [0.77, -0.2, 0.0],
+            color: [1., 1., 1.],
+        }, // D
+    ];
+    let indices_2: &[u16] = &[4, 6, 5, 6, 7, 5];
+    let player_2 = Player {
+        vertices: vertices_2.as_mut_slice(),
+    };
+
+    let ball = &[
+        Vertex {
+            position: [0.02, 0.02, 0.],
             color: [1., 1., 1.],
         },
         Vertex {
-            position: [0.9, 1., 1.],
+            position: [-0.02, 0.02, 0.],
             color: [1., 1., 1.],
         },
         Vertex {
-            position: [0.9, 0., 1.],
+            position: [-0.02, -0.02, 0.],
             color: [1., 1., 1.],
         },
         Vertex {
-            position: [1., 0., 1.],
+            position: [0.02, -0.02, 0.],
             color: [1., 1., 1.],
         },
     ];
 
-    let mut player_2 = Player {
-        vertices: &mut vertices_2,
-    };
+    let ball_indices: &[u16] = &[8, 9, 10, 8, 10, 11];
 
-    let indices_2 = vec![4, 5, 6, 4, 6, 7];
+    let mut combined_vertices = vec![];
+    combined_vertices.extend_from_slice(&player_1.vertices);
+    combined_vertices.extend_from_slice(&player_2.vertices);
+    combined_vertices.extend_from_slice(ball);
 
     let vertex_buffer = state
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice([vertices_1, vertices_2].concat().as_slice()),
-            usage: BufferUsages::VERTEX,
+            contents: bytemuck::cast_slice(combined_vertices.as_slice()),
+            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
         });
+
+    let mut combined_indices = Vec::from(indices_1);
+    combined_indices.extend_from_slice(indices_2);
+    combined_indices.extend_from_slice(ball_indices);
 
     let index_buffer = state
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice([indices_1, indices_2].concat().as_slice()),
+            contents: bytemuck::cast_slice(combined_indices.as_slice()),
             usage: BufferUsages::INDEX,
         });
 
     while !state.window.should_close() {
         glfw.poll_events();
 
-        for (_, event) in glfw::flush_messages(&events) {}
+        for (_, event) in glfw::flush_messages(&events) {
+            match event {
+                glfw::WindowEvent::Key(
+                    Key::W,
+                    _,
+                    glfw::Action::Press | glfw::Action::Repeat,
+                    _,
+                ) => {
+                    player_1
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] += 0.05);
+                }
+                glfw::WindowEvent::Key(Key::S, _, Action::Press | Action::Repeat, _) => {
+                    player_1
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] -= 0.05);
+                }
+                glfw::WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
+                    player_2
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] += 0.05);
+                }
+                glfw::WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {
+                    player_2
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] -= 0.05);
+                }
+                _ => {}
+            }
+        }
 
+        // Update Buffer
+        let mut new_vertices = vec![];
+        new_vertices.extend_from_slice(&player_1.vertices);
+        new_vertices.extend_from_slice(&player_2.vertices);
+        new_vertices.extend_from_slice(ball);
+
+        state.queue.write_buffer(
+            &vertex_buffer,
+            0,
+            bytemuck::cast_slice(new_vertices.as_slice()),
+        );
+
+        // Rendering
         let output = state
             .surface
             .get_current_texture()
@@ -268,7 +340,7 @@ async fn run() {
                 view: &view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
+                    load: wgpu::LoadOp::Clear(Color::BLACK),
                     store: wgpu::StoreOp::Store,
                 },
             })],
@@ -280,7 +352,7 @@ async fn run() {
         render_pass.set_pipeline(&state.render_pipeline);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..8, 0, 0..1);
+        render_pass.draw_indexed(0..combined_indices.len() as u32, 0, 0..1);
         drop(render_pass);
         state.queue.submit(std::iter::once(encoder.finish()));
         output.present();
