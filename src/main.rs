@@ -261,47 +261,95 @@ async fn run() {
     let mut combined_indices = Vec::from(indices_1);
     combined_indices.extend_from_slice(indices_2);
     combined_indices.extend_from_slice(ball_indices);
+
+    let mut is_w_down = false;
+    let mut is_s_down = false;
+    let mut is_up_down = false;
+    let mut is_down_down = false;
+
     {
         let p1 = Arc::clone(&player_1);
         let p2 = Arc::clone(&player_2);
+
         window.set_key_callback(Box::new(
             move |window: &mut glfw::Window,
                   key: glfw::Key,
                   _: i32,
                   action: glfw::Action,
                   _: glfw::Modifiers| {
-                if action == glfw::Action::Press || action == glfw::Action::Repeat {
-                    match key {
-                        glfw::Key::W => {
-                            p1.lock()
-                                .unwrap()
-                                .vertices
-                                .iter_mut()
-                                .for_each(|vertex| vertex.position[1] += 0.05);
-                        }
-                        glfw::Key::S => {
-                            p1.lock()
-                                .unwrap()
-                                .vertices
-                                .iter_mut()
-                                .for_each(|vertex| vertex.position[1] -= 0.05);
-                        }
-                        glfw::Key::Up => {
-                            p2.lock()
-                                .unwrap()
-                                .vertices
-                                .iter_mut()
-                                .for_each(|vertex| vertex.position[1] += 0.05);
-                        }
-                        glfw::Key::Down => {
-                            p2.lock()
-                                .unwrap()
-                                .vertices
-                                .iter_mut()
-                                .for_each(|vertex| vertex.position[1] -= 0.05);
-                        }
-                        _ => {}
-                    }
+                let player_1_up = || {
+                    p1.lock()
+                        .unwrap()
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] += 0.05);
+                };
+
+                let player_1_down = || {
+                    p1.lock()
+                        .unwrap()
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] -= 0.05);
+                };
+
+                let player_2_up = || {
+                    p2.lock()
+                        .unwrap()
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] += 0.05);
+                };
+
+                let player_2_down = || {
+                    p2.lock()
+                        .unwrap()
+                        .vertices
+                        .iter_mut()
+                        .for_each(|vertex| vertex.position[1] -= 0.05);
+                };
+                if key == glfw::Key::W {
+                    is_w_down = action == Action::Press || action == Action::Repeat;
+                }
+                if key == glfw::Key::S {
+                    is_s_down = action == Action::Press || action == Action::Repeat;
+                }
+                if key == glfw::Key::Up {
+                    is_up_down = action == Action::Press || action == Action::Repeat;
+                }
+                if key == glfw::Key::Down {
+                    is_down_down = action == Action::Press || action == Action::Repeat;
+                }
+
+                if is_w_down && is_up_down {
+                    player_1_up();
+                    player_2_up();
+                }
+
+                if is_s_down && is_up_down {
+                    player_1_down();
+                    player_2_up();
+                }
+                if is_w_down && is_down_down {
+                    player_1_up();
+                    player_2_down();
+                }
+
+                if is_s_down && is_down_down {
+                    player_1_down();
+                    player_2_down();
+                }
+                if is_w_down {
+                    player_1_up();
+                }
+                if is_s_down {
+                    player_1_down();
+                }
+                if is_up_down {
+                    player_2_up();
+                }
+                if is_down_down {
+                    player_2_down();
                 }
             },
         ));
