@@ -1,13 +1,11 @@
 #![warn(clippy::all, clippy::pedantic)]
 use std::sync::{Arc, Mutex};
 
-use glfw::{fail_on_errors, Action, Context, Key, Window};
+use glfw::{fail_on_errors, Action, Context, Window};
 use wgpu::{
-    self,
-    util::{DeviceExt, RenderEncoder},
-    BackendOptions, Backends, BufferDescriptor, BufferUsages, Color, InstanceDescriptor,
+    self, util::DeviceExt, BackendOptions, Backends, BufferUsages, Color, InstanceDescriptor,
     InstanceFlags, PipelineCompilationOptions, RenderPipelineDescriptor, RequestAdapterOptionsBase,
-    VertexState, QUERY_RESOLVE_BUFFER_ALIGNMENT,
+    VertexState,
 };
 
 struct Player {
@@ -164,28 +162,19 @@ impl<'a> State<'a> {
             render_pipeline,
         }
     }
-
-    pub fn on_key_press(
-        window: &mut glfw::Window,
-        key: glfw::Key,
-        _: i32,
-        action: glfw::Action,
-        _: glfw::Modifiers,
-    ) {
-    }
 }
 
 async fn run() {
     let mut glfw = glfw::init(fail_on_errors!()).expect("Failed to get glfw instance");
 
-    let (mut window, events) = glfw
+    let (mut window, _events) = glfw
         .create_window(1_000, 600, "Pong", glfw::WindowMode::Windowed)
         .expect("Failed to get window and events handlers.");
 
     window.set_key_polling(true);
     window.make_current();
 
-    let mut vertices_1 = [
+    let vertices_1 = [
         Vertex {
             position: [-0.8, 0.2, 0.0],
             color: [1., 1., 1.],
@@ -209,7 +198,7 @@ async fn run() {
         vertices: Vec::from(vertices_1),
     }));
 
-    let mut vertices_2 = [
+    let vertices_2 = [
         Vertex {
             position: [0.8, 0.2, 0.0],
             color: [1., 1., 1.],
@@ -392,10 +381,39 @@ async fn run() {
             contents: bytemuck::cast_slice(combined_vertices.as_slice()),
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
         });
+
+    let sanitize = |player: &Arc<Mutex<Player>>| {
+        // Check top boundary
+        let top_delta = player.lock().unwrap().vertices[0].position[1] - 1.;
+        if top_delta > 0. {
+            player
+                .lock()
+                .unwrap()
+                .vertices
+                .iter_mut()
+                .for_each(|vertex| vertex.position[1] -= top_delta);
+            return; //cannot be breaking both from the top and the bottom considering size of blocks
+        }
+
+        let bottom_delta = -1. - player.lock().unwrap().vertices[3].position[1];
+        if bottom_delta > 0. {
+            player
+                .lock()
+                .unwrap()
+                .vertices
+                .iter_mut()
+                .for_each(|vertex| vertex.position[1] += bottom_delta);
+        }
+    };
     while !state.window.should_close() {
         glfw.poll_events();
 
         // Update Buffer
+        // Check that any vertices are above or below and push everything to
+        // boundary.
+        sanitize(&player_1);
+        sanitize(&player_2);
+
         let mut new_vertices = vec![];
         new_vertices.extend_from_slice(&player_1.lock().unwrap().vertices);
         new_vertices.extend_from_slice(&player_2.lock().unwrap().vertices);
