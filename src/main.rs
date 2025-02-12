@@ -277,32 +277,25 @@ async fn run() {
                   _: i32,
                   action: glfw::Action,
                   _: glfw::Modifiers| {
-                let player_1_up = || {
-                    p1.lock()
+                let can_move_up = |player: &Arc<Mutex<Player>>| {
+                    player.lock().unwrap().vertices[0].position[1] + 0.05 < 1.
+                };
+                let can_move_down = |player: &Arc<Mutex<Player>>| {
+                    player.lock().unwrap().vertices[3].position[1] - 0.05 > -1.
+                };
+
+                let player_up = |player: &Arc<Mutex<Player>>| {
+                    player
+                        .lock()
                         .unwrap()
                         .vertices
                         .iter_mut()
                         .for_each(|vertex| vertex.position[1] += 0.05);
                 };
 
-                let player_1_down = || {
-                    p1.lock()
-                        .unwrap()
-                        .vertices
-                        .iter_mut()
-                        .for_each(|vertex| vertex.position[1] -= 0.05);
-                };
-
-                let player_2_up = || {
-                    p2.lock()
-                        .unwrap()
-                        .vertices
-                        .iter_mut()
-                        .for_each(|vertex| vertex.position[1] += 0.05);
-                };
-
-                let player_2_down = || {
-                    p2.lock()
+                let player_down = |player: &Arc<Mutex<Player>>| {
+                    player
+                        .lock()
                         .unwrap()
                         .vertices
                         .iter_mut()
@@ -322,34 +315,58 @@ async fn run() {
                 }
 
                 if is_w_down && is_up_down {
-                    player_1_up();
-                    player_2_up();
+                    if can_move_up(&p1) {
+                        player_up(&p1);
+                    }
+                    if can_move_up(&p1) {
+                        player_up(&p2);
+                    }
                 }
 
                 if is_s_down && is_up_down {
-                    player_1_down();
-                    player_2_up();
+                    if can_move_down(&p1) {
+                        player_down(&p1);
+                    }
+                    if can_move_up(&p2) {
+                        player_up(&p2);
+                    }
                 }
                 if is_w_down && is_down_down {
-                    player_1_up();
-                    player_2_down();
+                    if can_move_up(&p1) {
+                        player_up(&p1);
+                    }
+                    if can_move_down(&p2) {
+                        player_down(&p2);
+                    }
                 }
 
                 if is_s_down && is_down_down {
-                    player_1_down();
-                    player_2_down();
+                    if can_move_down(&p1) {
+                        player_down(&p1);
+                    }
+                    if can_move_down(&p2) {
+                        player_down(&p2);
+                    }
                 }
                 if is_w_down {
-                    player_1_up();
+                    if can_move_up(&p1) {
+                        player_up(&p1);
+                    }
                 }
                 if is_s_down {
-                    player_1_down();
+                    if can_move_down(&p1) {
+                        player_down(&p1);
+                    }
                 }
                 if is_up_down {
-                    player_2_up();
+                    if can_move_up(&p2) {
+                        player_up(&p2);
+                    }
                 }
                 if is_down_down {
-                    player_2_down();
+                    if can_move_down(&p2) {
+                        player_down(&p2);
+                    }
                 }
             },
         ));
