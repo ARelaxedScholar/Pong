@@ -2,6 +2,7 @@
 use std::sync::{Arc, Mutex};
 
 use glfw::{fail_on_errors, Action, Context, Window};
+use radians::Wrap64;
 use wgpu::{
     self, util::DeviceExt, BackendOptions, Backends, BufferUsages, Color, InstanceDescriptor,
     InstanceFlags, PipelineCompilationOptions, RenderPipelineDescriptor, RequestAdapterOptionsBase,
@@ -10,6 +11,14 @@ use wgpu::{
 
 struct Player {
     vertices: Vec<Vertex>,
+}
+
+struct Ball {
+    vertices: Vec<Vertex>,
+    velocity_direction: Wrap64,
+    velocity: f64,
+    acceleration: f64,
+    acceleration_direction: Wrap64,
 }
 
 #[repr(C)]
@@ -242,10 +251,18 @@ async fn run() {
 
     let ball_indices: &[u16] = &[8, 9, 10, 8, 10, 11];
 
+    let mut ball = Ball {
+        vertices: Vec::from(ball),
+        velocity: 0.,
+        acceleration: 0.,
+        velocity_direction: Wrap64::ZERO,
+        acceleration_direction: Wrap64::ZERO,
+    };
+
     let mut combined_vertices = vec![];
     combined_vertices.extend_from_slice(&player_1.lock().unwrap().vertices);
     combined_vertices.extend_from_slice(&player_2.lock().unwrap().vertices);
-    combined_vertices.extend_from_slice(ball);
+    combined_vertices.extend_from_slice(&ball.vertices);
 
     let mut combined_indices = Vec::from(indices_1);
     combined_indices.extend_from_slice(indices_2);
@@ -405,6 +422,17 @@ async fn run() {
                 .for_each(|vertex| vertex.position[1] += bottom_delta);
         }
     };
+    let coin_toss = |probability: f64| rand::random_bool(probability);
+
+    let to_player_1 = coin_toss(0.5);
+    // Game Init
+    if to_player_1 {
+        ball.velocity_direction = Wrap64::HALF_TURN;
+        ball.velocity = 0.03;
+    } else {
+        ball.velocity = 0.03;
+    }
+    // Game Loop
     while !state.window.should_close() {
         glfw.poll_events();
 
@@ -417,7 +445,7 @@ async fn run() {
         let mut new_vertices = vec![];
         new_vertices.extend_from_slice(&player_1.lock().unwrap().vertices);
         new_vertices.extend_from_slice(&player_2.lock().unwrap().vertices);
-        new_vertices.extend_from_slice(ball);
+        new_vertices.extend_from_slice(&ball.vertices);
 
         state.queue.write_buffer(
             &vertex_buffer,
