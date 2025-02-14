@@ -8,6 +8,7 @@ use wgpu::{
     InstanceFlags, PipelineCompilationOptions, RenderPipelineDescriptor, RequestAdapterOptionsBase,
     VertexState,
 };
+mod physics;
 
 struct Player {
     vertices: Vec<Vertex>,
