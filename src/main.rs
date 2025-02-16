@@ -1,5 +1,8 @@
 #![warn(clippy::all, clippy::pedantic)]
-use std::sync::{Arc, Mutex};
+use std::{
+    ops::Add,
+    sync::{Arc, Mutex},
+};
 
 use glfw::{fail_on_errors, Action, Context, Window};
 use radians::Wrap64;
@@ -424,6 +427,16 @@ async fn run() {
     let coin_toss = |probability: f64| rand::random_bool(probability);
 
     let to_player_1 = coin_toss(0.5);
+
+    let ball_centroid = [0., 0.];
+    let velocity = if to_player_1 { [-0.03, 0.] } else { [0.03, 0.] };
+    let acceleration = [0., 0.];
+
+    let mut ball_physics = BallPhysics {
+        position: ball_centroid,
+        velocity,
+        acceleration,
+    };
     // Game Init
     // if to_player_1 {
     //     ball.velocity = 0.03;
@@ -431,13 +444,41 @@ async fn run() {
     //     ball.velocity = 0.03;
     // }
     // Game Loop
+    let mut past_time = std::time::Instant::now();
     while !state.window.should_close() {
         glfw.poll_events();
-        // Ball
+        let delta_t = std::time::Instant::now() - past_time;
+        past_time = std::time::Instant::now();
 
-        // Update Buffer
-        // Check that any vertices are above or below and push everything to
-        // boundary.
+        // Update parameters
+        ball_physics
+            .position
+            .iter_mut()
+            .zip(ball_physics.velocity)
+            .for_each(|(pos, vel)| *pos += vel * delta_t.as_secs_f32());
+
+        ball_physics
+            .velocity
+            .iter_mut()
+            .zip(ball_physics.acceleration)
+            .for_each(|(vel, acc)| *vel += acc * delta_t.as_secs_f32());
+
+        // Bounce on top
+        if ball_physics.position[1] > 1. && ball_physics.velocity[1] > 0. {
+            ball_physics.velocity[1] *= -1.;
+            ball_physics.position[1] -= 0.02;
+        }
+
+        if ball_physics.position[1] < -1. && ball_physics.velocity[1] < 0. {
+            ball_physics.velocity[1] *= -1.;
+            ball_physics.position[1] += 0.02;
+        }
+
+        ball.vertices.iter_mut().for_each(|vertex| {
+            vertex.position[0] += ball_physics.position[0];
+            vertex.position[1] += ball_physics.position[1];
+        });
+
         sanitize(&player_1);
         sanitize(&player_2);
 
