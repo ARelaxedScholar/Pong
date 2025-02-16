@@ -16,10 +16,12 @@ struct Player {
 
 struct Ball {
     vertices: Vec<Vertex>,
-    velocity_direction: Wrap64,
-    velocity: f64,
-    acceleration: f64,
-    acceleration_direction: Wrap64,
+}
+
+struct BallPhysics {
+    position: [f32; 2],
+    velocity: [f32; 2],
+    acceleration: [f32; 2],
 }
 
 #[repr(C)]
@@ -254,10 +256,6 @@ async fn run() {
 
     let mut ball = Ball {
         vertices: Vec::from(ball),
-        velocity: 0.,
-        acceleration: 0.,
-        velocity_direction: Wrap64::ZERO,
-        acceleration_direction: Wrap64::ZERO,
     };
 
     let mut combined_vertices = vec![];
@@ -427,15 +425,15 @@ async fn run() {
 
     let to_player_1 = coin_toss(0.5);
     // Game Init
-    if to_player_1 {
-        ball.velocity_direction = Wrap64::HALF_TURN;
-        ball.velocity = 0.03;
-    } else {
-        ball.velocity = 0.03;
-    }
+    // if to_player_1 {
+    //     ball.velocity = 0.03;
+    // } else {
+    //     ball.velocity = 0.03;
+    // }
     // Game Loop
     while !state.window.should_close() {
         glfw.poll_events();
+        // Ball
 
         // Update Buffer
         // Check that any vertices are above or below and push everything to
