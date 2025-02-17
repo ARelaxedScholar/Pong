@@ -27,6 +27,12 @@ struct BallPhysics {
     acceleration: [f32; 2],
 }
 
+struct PaddlePhysics {
+    position: [f32; 2],
+    velocity: [f32; 2],
+    acceleration: [f32; 2],
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
@@ -429,7 +435,11 @@ async fn run() {
     let to_player_1 = coin_toss(0.5);
 
     let ball_centroid = [0., 0.];
-    let velocity = if to_player_1 { [-0.03, 0.] } else { [0.03, 0.] };
+    let velocity = if to_player_1 {
+        [-0.0051, 0.]
+    } else {
+        [0.0051, 0.]
+    };
     let acceleration = [0., 0.];
 
     let mut ball_physics = BallPhysics {
