@@ -492,6 +492,10 @@ async fn run() {
         sanitize(&player_1);
         sanitize(&player_2);
 
+        // Checks collision
+        if ball_physics.position < &player_1.lock().unwrap().vertices {}
+
+        // Render
         let mut new_vertices = vec![];
         new_vertices.extend_from_slice(&player_1.lock().unwrap().vertices);
         new_vertices.extend_from_slice(&player_2.lock().unwrap().vertices);
